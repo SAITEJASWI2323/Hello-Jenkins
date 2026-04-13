@@ -1,0 +1,304 @@
+AGE: (SERVER)
+import socket
+from datetime import date
+from calendar import monthrange
+HOST = "127.0.0.1"
+PORT = 9999
+server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server.bind((HOST, PORT))
+print("UDP Server is running...")
+while True:
+    data, addr = server.recvfrom(1024)
+    try:
+        dob_str = data.decode().strip()
+        year, month, day = map(int, dob_str.split("-"))
+        birth_date = date(year, month, day)
+        today = date.today()
+        years = today.year - birth_date.year
+        months = today.month - birth_date.month
+        days = today.day - birth_date.day
+        if days < 0:
+            months -= 1
+            prev_month = today.month - 1 or 12
+            prev_year = today.year if today.month != 1 else today.year - 1
+            days += monthrange(prev_year, prev_month)[1]
+        if months < 0:
+            years -= 1
+            months += 12
+        result = f"Today's date: {today.strftime('%d/%m/%Y')}\n"
+        result += f"Age: {years} years {months} months {days} days"
+    except Exception:
+        result = "Invalid date format! Please send date as YYYY-MM-DD"
+    server.sendto(result.encode(), addr)
+
+AGE (CLIENT)
+import socket
+HOST = "127.0.0.1"
+PORT = 9999
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+year = input("Enter birth year (YYYY): ")
+month = input("Enter birth month (MM): ")
+day = input("Enter birth day (DD): ")
+dob = f"{year}-{month}-{day}"
+client.sendto(dob.encode(), (HOST, PORT))
+data, _ = client.recvfrom(1024)
+print("\nServer Response:")
+print(data.decode())
+client.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DICTIONARY (SERVER)
+import socket
+HOST = "0.0.0.0"
+PORT = 5000
+dictionary = {
+    "python": "A programming language",
+    "network": "Connected computers",
+    "router": "Device that forwards data",
+}
+def run_server():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((HOST, PORT))
+    server.listen(1)
+    print(f"TCP Dictionary Server running on port {PORT}...")
+    conn, addr = server.accept()
+    print("Client connected:", addr)
+    while True:
+        word = conn.recv(1024).decode().lower()
+        if not word or word == "exit":
+            print("Client disconnected.")
+            break
+        if word in dictionary:
+            conn.send(dictionary[word].encode())
+            print("Word received from client:", word)
+        else:
+            conn.send("Word not found".encode())
+            print("Unknown word received from client:", word)
+    conn.close()
+    server.close()
+if __name__ == "__main__":
+    run_server()
+
+DICTIONARY (CLIENT)
+import socket
+SERVER = "localhost"
+PORT = 5000
+def run_client():
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((SERVER, PORT))
+    print("Connected to TCP Dictionary Server.")
+    while True:
+        word = input("Enter a word (or text exit): ")
+        client.send(word.encode())
+        if word.lower() == "exit":
+            print("Closing connection....")
+            break
+        response = client.recv(1024).decode()
+        if response == "Word not found":
+            print(response)
+        else:
+            print("Meaning:", response)
+    client.close()
+if __name__ == "__main__":
+    run_client()
+
+
+
+
+
+
+
+
+
+
+
+
+GUESS NUMBER SERVER
+import socket
+import random
+HOST="0.0.0.0"
+PORT=5000
+sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+sock.bind((HOST,PORT))
+print("UDP Guess-It Server Started....")
+magic=random.randint(1,99)
+attempts=0
+MAX_ATTEMPTS=10
+while attempts<MAX_ATTEMPTS:
+    data,addr=sock.recvfrom(1024)
+    guess=int(data.decode())
+    attempts+=1
+    print(f"Client guessed:{guess}")
+    if guess==magic:
+        sock.sendto("Great".encode(),addr)
+        print("Client guessed correctly.Game Over.")
+        break
+    elif attempts==MAX_ATTEMPTS:
+        sock.sendto("Better luck next time:)".encode(),addr)
+        print("Client failed in 10 attempts.")
+        break
+    elif guess<magic:
+        sock.sendto("Higher".encode(),addr)
+    elif guess>magic:
+        sock.sendto("Lower".encode(),addr)
+sock.close()
+
+GUESS NUMBER CLIENT
+import socket
+SERVER_IP="127.0.0.1"
+PORT=5000
+sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+print("Guess the Magic Number(1–99)")
+for i in range(10):
+    guess=input(f"Attempt {i+1}: Enter your guess:")
+    sock.sendto(guess.encode(),(SERVER_IP,PORT))
+    data,_=sock.recvfrom(1024)
+    response=data.decode()
+    print("Server:",response)
+    if response=="Great":
+        break
+    if response=="Better luck next time:)":
+        break
+sock.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+IMAGE_SERVER
+import socket
+HOST = "0.0.0.0"
+PORT = 5001
+BUFFER_SIZE = 4096
+END_MARKER = b"__END__"
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((HOST, PORT))
+print("UDP Image Server started... Waiting for image...")
+image_data = b""
+while True:
+    data, addr = sock.recvfrom(BUFFER_SIZE)
+    if data == END_MARKER:
+        print("Image transfer complete.")
+        break
+    image_data += data
+with open("received_image.jpg", "wb") as f:
+    f.write(image_data)
+print("Image saved as received_image.jpg")
+sock.close()
+
+
+IMAGE_CLIENT
+import socket
+SERVER_IP = "127.0.0.1"   # Change if server is remote
+PORT = 5001
+BUFFER_SIZE = 4096
+END_MARKER = b"__END__"
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+image_path = "screen.jpg"   # Image to send
+with open(image_path, "rb") as f:
+    while True:
+        chunk = f.read(BUFFER_SIZE)
+        if not chunk:
+            break
+        sock.sendto(chunk, (SERVER_IP, PORT))
+sock.sendto(END_MARKER, (SERVER_IP, PORT))
+print("Image sent successfully.")
+sock.close()
+
+
+tracert www.google.in  (or) tracert www.google.co.in
+ping google.com
+ipconfig
+arp -a
+arp -a -N (or) arp -a -N  192.168.42.171
+netstat
+hostname
+hostname -s
+hostname -d
+route print   (or) route
+route add 0.0.0.0 mask 0.0.0.0 <gateway>
+route delete 0.0.0.0
+nslookup microsoft.com
+pathping google.com
+nbtstat (or) nbtstat -n
+getmac
+
+
+
+
+
+
+
+
+
+The network was subnetted into 6 subnets using /27 mask.
+Due to hardware limitation (router ports), only 2 subnets were implemented in Packet Tracer.”
+
+
+GIVEN
+	Site address: 201.70.64.0 
+	Need: 6 subnets 
+________________________________________
+🔹 STEP 1: Find Class & Default Mask
+	201 → Class C 
+	Default mask: 255.255.255.0 (/24) 
+________________________________________
+🔹 STEP 2: Find Required Subnets
+We need 6 subnets
+Use formula:
+2^n≥6
+
+2^n≥6
+	2^2=4❌ 
+	2^3=8✅ 
+👉 So borrow 3 bits
+________________________________________
+🔹 STEP 3: New Subnet Mask
+	Default = /24 
+	Borrow 3 bits → /27 
+👉 New mask:
+	255.255.255.224 
+________________________________________
+🔹 STEP 4: Find Block Size
+256-224=32
+
+👉 Block size = 32
+
+
+
+
+
+
+
+
+
+
+
