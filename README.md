@@ -132,6 +132,69 @@ ID: dockerhub-creds
 Description: DockerHub Login
 
 Create pipeline and add script
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "kothaavinash/student-results:latest"    //change docker username and image name(check in deployment code
+        KUBECONFIG = 'C:\\Users\\HP\\.kube\\config'             //path of kube and config
+    } 
+
+    stages {
+
+        stage('Clone Code') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/Avinash2005-s/practise.git'    //gitlink
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                bat 'docker build -t %DOCKER_IMAGE% .'
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',       //check whether it matches in jenkins dockerhub-creds fro some
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    bat 'docker login -u %USER% -p %PASS%'
+                    bat 'docker push %DOCKER_IMAGE%'
+                }
+            }
+        }
+
+        stage('Check Kubernetes Connection') {
+            steps {
+                bat 'kubectl cluster-info'   // ✅ Debug step
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                bat 'kubectl apply -f deployment.yaml'
+            }
+        }
+    }
+
+    post {
+        success { 
+            echo 'CI/CD Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Please check logs.'
+        }
+    }
+}
+
+
+or
+
+
 
 pipeline {
     agent any
