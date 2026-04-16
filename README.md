@@ -132,6 +132,61 @@ ID: dockerhub-creds
 Description: DockerHub Login
 
 Create pipeline and add script
+
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = "srilayam/rivera-events:latest"  //add docker username
+    } 
+    stages {
+        stage('Clone Code') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/Srilaya18/rivera.git'   //repo link change
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                bat 'docker build -t %DOCKER_IMAGE% .'
+            }
+        }
+        stage('Push Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    bat 'docker login -u %USER% -p %PASS%'
+                    bat 'docker push %DOCKER_IMAGE%'
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                bat 'kubectl apply -f deployment.yaml --validate=false || exit 0'
+            }
+        }
+    }
+    post {
+        success { 
+            echo 'CI/CD Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Please check logs.'
+        }
+    }
+}
+
+
+
+
+ or   
+
+
+
+
+ 
 pipeline {
     agent any
 
